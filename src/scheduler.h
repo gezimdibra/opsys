@@ -16,6 +16,7 @@ protected:
     int contextSwitchTime;
     int contextSwitchCount;
     bool isCpuBusy;
+    double cpuUtilization;
     std::shared_ptr<Process> currentProcess;
     
     // Process collection
@@ -33,6 +34,7 @@ public:
     virtual std::shared_ptr<Process> getNextProcess() = 0;
     virtual bool shouldPreempt(std::shared_ptr<Process> newProcess) = 0;
     virtual bool isPreemptive() const = 0;
+    virtual void updateWaitingTime(int timeElapsed) = 0;
     
     // Common methods
     void setCurrentProcess(std::shared_ptr<Process> process);
@@ -40,13 +42,11 @@ public:
     bool hasCpuProcess() const;
     void clearCurrentProcess();
     
-    // Update waiting time for all processes in the ready queue
-    virtual void updateWaitingTime(int timeElapsed) = 0;
-    
-    // Statistics getters
+    // Statistics getters and setters
     int getTotalTime() const { return totalTime; }
     int getCpuBusyTime() const { return cpuBusyTime; }
-    double getCpuUtilization() const;
+    double getCpuUtilization() const { return cpuUtilization; }
+    void setCpuUtilization(double util) { cpuUtilization = util; }
     int getContextSwitchCount() const { return contextSwitchCount; }
     int getContextSwitchTime() const { return contextSwitchTime; }
     const std::string& getName() const { return name; }
