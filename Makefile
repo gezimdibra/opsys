@@ -36,12 +36,12 @@ clean:
 setup:
 	mkdir -p output trace
 
-# Run the data generator
+# Generate input file
 generate: $(GENERATOR)
-	./$(GENERATOR)
+	./$(GENERATOR) > input.txt
 
 # Run all simulations and generate reports
-run: $(EXECUTABLE) setup
+run: setup $(EXECUTABLE) generate
 	./$(EXECUTABLE) < input.txt > output/default_output.txt
 	./$(EXECUTABLE) -d < input.txt > output/detailed_output.txt
 	./$(EXECUTABLE) -v < input.txt > output/verbose_output.txt
@@ -58,4 +58,4 @@ run: $(EXECUTABLE) setup
 	./$(EXECUTABLE) -d -v -a RR50 < input.txt > output/rr50_detailed_verbose.txt
 	./$(EXECUTABLE) -d -v -a RR100 < input.txt > output/rr100_detailed_verbose.txt
 
-.PHONY: all clean setup generate run
+.PHONY: all clean setup run generate
