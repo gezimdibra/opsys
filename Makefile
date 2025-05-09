@@ -11,7 +11,7 @@ GENERATOR_SRC = src/generator.cpp
 
 # Object files
 OBJECTS = $(SOURCES:.cpp=.o)
-GENERATOR_OBJ = $(GENERATOR_SRC:.cpp=.o)
+GENERATOR_OBJ = src/generator.o
 
 # Executables
 EXECUTABLE = sim
@@ -23,9 +23,9 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@
 
 $(GENERATOR): $(GENERATOR_OBJ)
-	$(CXX) $(CXXFLAGS) $(GENERATOR_OBJ) -o $(GENERATOR)
+	$(CXX) $(CXXFLAGS) $(GENERATOR_OBJ) -o $@
 
-%.o: %.cpp
+src/%.o: src/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
