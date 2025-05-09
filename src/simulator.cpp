@@ -101,8 +101,7 @@ void Simulator::runScheduler(std::shared_ptr<Scheduler> scheduler) {
     // Reset all processes and add initial events
     for (auto& process : processes) {
         process->setState(ProcessState::NEW);
-        int arrivalTime = process->getArrivalTime();
-        Event arrivalEvent(EventType::PROCESS_ARRIVAL, arrivalTime, process);
+        Event arrivalEvent(EventType::PROCESS_ARRIVAL, process->getArrivalTime(), process);
         eventQueue.push(arrivalEvent);
         scheduler->addToAllProcesses(process);
     }
@@ -112,21 +111,24 @@ void Simulator::runScheduler(std::shared_ptr<Scheduler> scheduler) {
         Event event = eventQueue.top();
         eventQueue.pop();
         
-        // Update current time
-        if (event.getTime() > currentTime) {
-            int timeElapsed = event.getTime() - currentTime;
+        // Update time and statistics
+        int timeElapsed = event.getTime() - currentTime;
+        if (timeElapsed > 0) {
+            scheduler->updateWaitingTime(timeElapsed);
             
-            // Update CPU busy time if a process is running
             if (scheduler->hasCpuProcess()) {
                 scheduler->incrementCpuBusyTime(timeElapsed);
+                
+                // For Round Robin, update time slice
+                if (auto rrScheduler = std::dynamic_pointer_cast<RRScheduler>(scheduler)) {
+                    rrScheduler->decrementTimeSlice(timeElapsed);
+                }
             }
-            
-            // Update waiting time for processes in ready queue
-            scheduler->updateWaitingTime(timeElapsed);
-            currentTime = event.getTime();
         }
         
-        // Process the event based on its type
+        currentTime = event.getTime();
+        
+        // Process the event
         switch (event.getType()) {
             case EventType::PROCESS_ARRIVAL:
                 processArrival(event, scheduler);
@@ -144,10 +146,21 @@ void Simulator::runScheduler(std::shared_ptr<Scheduler> scheduler) {
                 processContextSwitchComplete(event, scheduler);
                 break;
         }
+        
+        // Check for timer interrupt in Round Robin
+        if (auto rrScheduler = std::dynamic_pointer_cast<RRScheduler>(scheduler)) {
+            if (rrScheduler->hasCpuProcess() && rrScheduler->isTimeSliceExpired()) {
+                Event timerEvent(EventType::TIMER_INTERRUPT, currentTime, 
+                               rrScheduler->getCurrentProcess());
+                eventQueue.push(timerEvent);
+            }
+        }
     }
     
-    // Update final statistics
+    // Set final statistics
     scheduler->setTotalTime(currentTime);
+    
+    // Calculate CPU utilization
     if (currentTime > 0) {
         double utilization = (static_cast<double>(scheduler->getCpuBusyTime()) / currentTime) * 100.0;
         scheduler->setCpuUtilization(utilization);
@@ -178,6 +191,7 @@ void Simulator::processCPUBurstCompletion(const Event& event, std::shared_ptr<Sc
         if (params.verboseMode) {
             logStateTransition(process, ProcessState::RUNNING, ProcessState::TERMINATED);
         }
+        
         process->setState(ProcessState::TERMINATED);
         process->setFinishTime(currentTime);
         scheduler->clearCurrentProcess();
@@ -186,10 +200,12 @@ void Simulator::processCPUBurstCompletion(const Event& event, std::shared_ptr<Sc
         if (params.verboseMode) {
             logStateTransition(process, ProcessState::RUNNING, ProcessState::BLOCKED);
         }
+        
         process->setState(ProcessState::BLOCKED);
         int ioCompletionTime = currentTime + process->getCurrentBurst().duration;
         Event ioCompletionEvent(EventType::IO_COMPLETION, ioCompletionTime, process);
         eventQueue.push(ioCompletionEvent);
+        
         scheduler->clearCurrentProcess();
         scheduleNextEvent(scheduler);
     }
@@ -222,6 +238,7 @@ void Simulator::processTimerInterrupt(const Event& event, std::shared_ptr<Schedu
         if (params.verboseMode) {
             logStateTransition(process, ProcessState::RUNNING, ProcessState::READY);
         }
+        
         rrScheduler->addProcess(process);
         rrScheduler->clearCurrentProcess();
         contextSwitch(process, nullptr, scheduler);
@@ -276,6 +293,7 @@ void Simulator::checkPreemption(std::shared_ptr<Process> newProcess, std::shared
         if (params.verboseMode) {
             logStateTransition(currentProcess, ProcessState::RUNNING, ProcessState::READY);
         }
+        
         scheduler->addProcess(currentProcess);
         contextSwitch(currentProcess, newProcess, scheduler);
     }
