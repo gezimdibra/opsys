@@ -25,7 +25,7 @@ $(EXECUTABLE): $(OBJECTS)
 $(GENERATOR): $(GENERATOR_OBJ)
 	$(CXX) $(CXXFLAGS) $(GENERATOR_OBJ) -o $@
 
-.cpp.o:
+%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
