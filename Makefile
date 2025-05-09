@@ -41,7 +41,7 @@ generate: $(GENERATOR)
 	./$(GENERATOR) > input.txt
 
 # Run all simulations and generate reports
-run: setup $(EXECUTABLE) generate
+run: setup $(EXECUTABLE) input.txt
 	./$(EXECUTABLE) < input.txt > output/default_output.txt
 	./$(EXECUTABLE) -d < input.txt > output/detailed_output.txt
 	./$(EXECUTABLE) -v < input.txt > output/verbose_output.txt
